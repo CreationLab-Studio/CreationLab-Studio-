@@ -108,5 +108,197 @@ $("px").onclick=()=>{$("fpo").value="",drawPoster()};
 $("pu").onclick=()=>$("fpf").click();
 $("fpf").onchange=async()=>{const t=$("fpf").files[0];if($("fpf").value="",!t)return;busy=!0,$("sv").disabled=!0,bar("pb",0);try{const n=await shrink(t),a=await upload(n,"img/"+rid()+("image/webp"===n.type?".webp":".jpg"),t=>bar("pb",t));$("fpo").value=a,fresh.push(a),drawPoster()}catch(e){toast("อัปโหลดปกไม่สำเร็จ")}bar("pb",null),busy=!1,$("sv").disabled=!1};
 </script>
+<script>
+/* CreationLab patch */
+(function () {
+  function K(n) {
+    n = +n || 0;
+    var a = Math.abs(n);
+    if (a < 1000) return String(Math.round(n));
+    var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
+    for (var i = 0; i < 3; i++) {
+      if (a >= u[i][0]) {
+        var v = Math.floor(a / u[i][0] * 10) / 10;
+        return (n < 0 ? '-' : '') + (v % 1 ? v.toFixed(1) : v.toFixed(0)) + u[i][1];
+      }
+    }
+  }
+
+  var css = '' +
+    '.tabs{grid-template-columns:repeat(3,1fr)!important}.tab{font-size:14px}' +
+    '#vs>*+*{margin-top:12px}' +
+    '.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;padding:4px;background:#13141a;border:2px solid #3b3f4d;border-radius:13px}' +
+    '.seg button{min-height:38px;border:0;border-radius:9px;background:transparent;color:#8d92a8;cursor:pointer;font-size:14px;font-family:inherit;touch-action:manipulation}' +
+    '.seg button.on{background:#363a4b;color:#fff;box-shadow:0 0 10px rgba(255,255,255,.18)}' +
+    '.kon{display:flex;align-items:center;justify-content:space-between}' +
+    '.kon span{font-family:"Prompt",sans-serif;font-size:14px;color:#c9ccd8}' +
+    '.kon b{font-size:34px;font-weight:400;text-shadow:0 3px 0 #3b3f4d}' +
+    '.k3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}' +
+    '.k3 .pn{margin-top:0!important;padding:14px 4px;text-align:center}' +
+    '.k3 b{display:block;font-size:30px;font-weight:400;line-height:1.2;text-shadow:0 3px 0 #3b3f4d}' +
+    '.k3 span{font-family:"Prompt",sans-serif;font-size:12px;color:#8d92a8}' +
+    '.hh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}.hh h3{margin:0}.hh .seg{min-width:150px}' +
+    '.hr{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:6px;align-items:center;padding:9px 0;border-top:1px solid #2f3240;font-size:14px;text-align:center}' +
+    '.hr>:first-child{text-align:left;font-family:"Prompt",sans-serif;font-size:13px}' +
+    '.hr.h{border-top:0;color:#8d92a8;font-family:"Prompt",sans-serif;font-size:11px}' +
+    '.hr.t{color:#fff;border-top:2px solid #4a4e5e}' +
+    '.swr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-top:1px solid #2f3240}' +
+    '.swr span{font-family:"Prompt",sans-serif;font-size:14px}' +
+    '.tg{width:54px;height:30px;border-radius:16px;border:2px solid #5a5f72;background:#13141a;position:relative;cursor:pointer;flex:none;transition:.2s}' +
+    '.tg::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#8d92a8;transition:.2s}' +
+    '.tg.on{background:#363a4b;border-color:#fff}.tg.on::after{left:27px;background:#fff}';
+  var st = document.createElement('style');
+  st.textContent = css;
+  document.head.appendChild(st);
+
+  /* ===== หน้า "ข้อมูล" ใหม่ ===== */
+  $('vs').innerHTML =
+    '<div class="seg" id="kseg"><button data-p="d" class="on">วันนี้</button><button data-p="m">เดือนนี้</button><button data-p="a">ทั้งหมด</button></div>' +
+    '<div class="pn kon"><span><i class="dot"></i>ออนไลน์ตอนนี้ (คน)</span><b id="kOn">-</b></div>' +
+    '<div class="k3">' +
+    '<div class="pn"><b id="kV">-</b><span>เข้าเว็บ</span></div>' +
+    '<div class="pn"><b id="kW">-</b><span>ดูสินค้า</span></div>' +
+    '<div class="pn"><b id="kB">-</b><span>กดสั่งซื้อ</span></div></div>' +
+    '<div class="pn"><h3>ต่อสินค้า (<span id="kPl"></span>)</h3><div id="kProd"></div></div>' +
+    '<div class="pn"><div class="hh"><h3>ประวัติ</h3><div class="seg" id="khseg"><button data-h="d" class="on">รายวัน</button><button data-h="m">รายเดือน</button></div></div><div id="kHist"></div></div>' +
+    '<div class="row"><button class="bt" id="rf">รีเฟรช</button></div>';
+
+  var per = 'd', hist = 'd', T = [], D = null;
+  var PL = { d: 'วันนี้', m: 'เดือนนี้', a: 'ทั้งหมด' };
+
+  function seg(id, attr, cb) {
+    $(id).onclick = function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      $(id).querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      cb(b.dataset[attr]);
+      draw();
+    };
+  }
+  seg('kseg', 'p', function (v) { per = v; });
+  seg('khseg', 'h', function (v) { hist = v; });
+  $('rf').onclick = async function () { await loadProducts(); loadStats(); };
+
+  function draw() {
+    var today = D && D.today, mon = today ? today.slice(0, 7) : '';
+    var inP = function (d) { return per === 'd' ? d === today : d.slice(0, 7) === mon; };
+    var tot = function (k) { return T.filter(function (r) { return r.kind === k; }).reduce(function (x, r) { return x + (+r.n || 0); }, 0); };
+    var dsum = function (k) { return D.daily.filter(function (r) { return r.k === k && inP(r.d); }).reduce(function (x, r) { return x + (+r.n || 0); }, 0); };
+    var val = function (k) { return per === 'a' ? tot(k) : (D ? dsum(k) : 0); };
+    $('kV').textContent = K(val('visit'));
+    $('kW').textContent = per === 'a' ? K(tot('view')) : K(val('view'));
+    $('kB').textContent = K(val('buy'));
+    $('kPl').textContent = PL[per];
+
+    var pv = {}, pb = {};
+    if (per === 'a') {
+      T.forEach(function (r) { if (r.kind === 'view') pv[r.pid] = +r.n; if (r.kind === 'buy') pb[r.pid] = +r.n; });
+    } else if (D) {
+      D.prod.forEach(function (r) {
+        if (!inP(r.d)) return;
+        var o = r.k === 'view' ? pv : pb;
+        o[r.p] = (o[r.p] || 0) + (+r.n);
+      });
+    }
+    var rows = P.slice().sort(function (a, b) { return (pv[b.id] || 0) - (pv[a.id] || 0); });
+    $('kProd').innerHTML = rows.length ? rows.map(function (t) {
+      return '<div class="vr"><img src="' + esc((t.images || [])[0] || '') + '" alt=""><div class="nm">' + esc(t.name || '(ไม่มีชื่อ)') +
+        '</div><div class="n">' + K(pv[t.id]) + '<small>ดู</small></div><div class="n">' + K(pb[t.id]) + '<small>กดสั่งซื้อ</small></div></div>';
+    }).join('') : '<p class="mut">ยังไม่มีสินค้า</p>';
+
+    var H = $('kHist');
+    if (!D) { H.innerHTML = '<p class="mut">ยังไม่มีสถิติรายวัน/รายเดือน — ให้รันไฟล์ update.sql ใน Supabase ก่อน</p>'; return; }
+    var m = {}, i, h = '';
+    D.daily.forEach(function (r) {
+      var key = (hist === 'd' ? r.d : r.d.slice(0, 7)) + '|' + r.k;
+      m[key] = (m[key] || 0) + (+r.n);
+    });
+    var keys = [];
+    if (hist === 'd') {
+      for (i = 0; i < 14; i++) {
+        var t = new Date(today + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() - i);
+        keys.push(t.toISOString().slice(0, 10));
+      }
+    } else {
+      var y = +mon.slice(0, 4), mo = +mon.slice(5, 7);
+      for (i = 0; i < 12; i++) {
+        keys.push(y + '-' + String(mo).padStart(2, '0'));
+        mo--; if (mo < 1) { mo = 12; y--; }
+      }
+    }
+    var sum = { visit: 0, view: 0, buy: 0 };
+    h = '<div class="hr h"><div>' + (hist === 'd' ? 'วัน' : 'เดือน') + '</div><div>เข้าเว็บ</div><div>ดูสินค้า</div><div>สั่งซื้อ</div></div>';
+    keys.forEach(function (k) {
+      var label = hist === 'd'
+        ? new Date(k + 'T00:00:00Z').toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+        : new Date(k + '-01T00:00:00Z').toLocaleDateString('th-TH', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      var a = m[k + '|visit'] || 0, b = m[k + '|view'] || 0, c = m[k + '|buy'] || 0;
+      sum.visit += a; sum.view += b; sum.buy += c;
+      h += '<div class="hr"><div>' + label + '</div><div>' + K(a) + '</div><div>' + K(b) + '</div><div>' + K(c) + '</div></div>';
+    });
+    h += '<div class="hr t"><div>รวม ' + (hist === 'd' ? '14 วัน' : '12 เดือน') + '</div><div>' + K(sum.visit) + '</div><div>' + K(sum.view) + '</div><div>' + K(sum.buy) + '</div></div>';
+    H.innerHTML = h;
+  }
+
+  /* แทนฟังก์ชันเดิม (ปุ่มรีเฟรช/poll ทุก 5 วิ เรียกชื่อเดิม จึงใช้ของใหม่อัตโนมัติ) */
+  loadOnline = async function () {
+    try { var el = $('kOn'); if (el) el.textContent = K(await api('/rest/v1/rpc/online_count', { m: 'POST', b: {} })); } catch (e) {}
+  };
+  loadStats = async function () {
+    loadOnline();
+    try {
+      var r = await Promise.all([
+        api('/rest/v1/stats?select=kind,pid,n'),
+        api('/rest/v1/rpc/admin_stats', { m: 'POST', b: {} }).catch(function () { return null; })
+      ]);
+      T = r[0] || [];
+      D = r[1] && r[1].today ? r[1] : null;
+      draw();
+    } catch (e) { toast('โหลดข้อมูลไม่สำเร็จ (รัน SQL แล้วหรือยัง?)'); }
+  };
+
+  /* ===== แท็บ "ตั้งค่า" ===== */
+  var gb = document.createElement('button');
+  gb.className = 'tab'; gb.dataset.t = 'g'; gb.textContent = 'ตั้งค่า';
+  gb.onclick = function () { show('g'); };
+  document.querySelector('.tabs').appendChild(gb);
+
+  var vg = document.createElement('div');
+  vg.id = 'vg'; vg.className = 'view'; vg.hidden = true;
+  vg.innerHTML = '<div class="pn"><h3>แสดงบนหน้าหลัก</h3><p class="mut">เปิด/ปิดตัวเลขที่ลูกค้าเห็น (บันทึกทันที)</p>' +
+    '<div class="swr"><span>จำนวนคนออนไลน์</span><button class="tg" data-k="online"></button></div>' +
+    '<div class="swr"><span>จำนวนการเข้าเว็บ</span><button class="tg" data-k="visits"></button></div>' +
+    '<div class="swr"><span>จำนวนสินค้า</span><button class="tg" data-k="products"></button></div></div>';
+  $('main').appendChild(vg);
+
+  var cfg = { online: true, visits: true, products: true };
+  function paint() { vg.querySelectorAll('.tg').forEach(function (b) { b.classList.toggle('on', cfg[b.dataset.k] !== false); }); }
+  async function loadCfg() {
+    try {
+      var r = await api('/rest/v1/settings?key=eq.home&select=value');
+      if (r && r[0] && r[0].value) cfg = Object.assign({ online: true, visits: true, products: true }, r[0].value);
+    } catch (e) { toast('โหลดการตั้งค่าไม่สำเร็จ (รัน update.sql แล้วหรือยัง?)'); }
+    paint();
+  }
+  vg.onclick = async function (e) {
+    var b = e.target.closest('.tg');
+    if (!b) return;
+    var k = b.dataset.k, old = cfg[k] !== false;
+    cfg[k] = !old; paint();
+    try {
+      await api('/rest/v1/settings?on_conflict=key', { m: 'POST', b: { key: 'home', value: cfg }, h: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
+      toast('บันทึกแล้ว');
+    } catch (err) { cfg[k] = old; paint(); toast('บันทึกไม่สำเร็จ'); }
+  };
+
+  var _show = show;
+  show = function (t) {
+    _show(t);
+    vg.hidden = t !== 'g';
+    if (t === 'g') loadCfg();
+  };
+})();
+</script>
+
 </body>
 </html>
