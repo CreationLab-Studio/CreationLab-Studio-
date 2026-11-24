@@ -8,6 +8,139 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#17181c">
 <title>CreationLab Studio - Minecraft Bedrock Addon</title>
+<script>
+/* CreationLab patch */
+(function () {
+  var FORCE_ANIM = true; // true = แอนิเมชันทำงานเหมือนกันทุกเครื่อง (แม้เปิดโหมดประหยัดแบตฯ/ลดการเคลื่อนไหว)
+
+  /* ---------- 1) กันเว็บพังในเบราว์เซอร์/แอปที่บล็อก localStorage (เช่น in-app browser, private mode) ---------- */
+  ['localStorage', 'sessionStorage'].forEach(function (n) {
+    var ok = true;
+    try { var s = window[n]; s.setItem('__t', '1'); s.removeItem('__t'); } catch (e) { ok = false; }
+    if (ok) return;
+    var d = {};
+    var api = {
+      getItem: function (k) { return k in d ? d[k] : null; },
+      setItem: function (k, v) { d[k] = String(v); },
+      removeItem: function (k) { delete d[k]; },
+      clear: function () { d = {}; }
+    };
+    var px = new Proxy(api, {
+      get: function (t, k) { return k in t ? t[k] : d[k]; },
+      set: function (t, k, v) { d[k] = String(v); return true; }
+    });
+    try { Object.defineProperty(window, n, { value: px, configurable: true }); } catch (e) {}
+  });
+
+  /* ---------- 2) ไม่ให้ "ลดการเคลื่อนไหว" ปิดแอนิเมชันบางเครื่อง ---------- */
+  if (FORCE_ANIM && window.matchMedia) {
+    var mm = window.matchMedia.bind(window);
+    window.matchMedia = function (q) {
+      if (/prefers-reduced-motion/i.test(q)) {
+        return { matches: false, media: q, onchange: null, addListener: function () {}, removeListener: function () {},
+          addEventListener: function () {}, removeEventListener: function () {}, dispatchEvent: function () { return false; } };
+      }
+      return mm(q);
+    };
+  }
+
+  /* ---------- 3) CSS ---------- */
+  var css = '' +
+    /* เบราว์เซอร์ที่ไม่รองรับ plus-lighter: ยังเห็นแสงวิ่งบนหัวข้อ */
+    '@supports not (mix-blend-mode:plus-lighter){:root #pTitle .tfx i,:root #spTitle .tfx i{mix-blend-mode:normal}}' +
+    /* เปิดแอนิเมชันกลับในเครื่องที่เปิด reduce-motion */
+    (FORCE_ANIM ? '@media (prefers-reduced-motion:reduce){' +
+      ':root .logo img{animation:logo-idle 4s ease-in-out infinite}' +
+      ':root .tw svg{animation:twinkle var(--t,2.4s) ease-in-out var(--d,0s) infinite}' +
+      ':root .sy .cur::after{animation:blink 1s steps(1,end) infinite}' +
+      ':root .pp.on #pTitle .tfx i,:root .sp.on #spTitle .tfx i{animation:tshine 3s linear infinite}' +
+      ':root .sbar .ring2 i{animation:bspin 5s linear infinite}' +
+      ':root .pp-fx .pg{animation:pg-drift var(--t,18s) ease-in-out var(--d,0s) infinite}' +
+      ':root .pp-fx .pq{display:block;animation:pq-rise var(--t,9s) linear var(--d,0s) infinite}' +
+      '}' : '') +
+    /* แถบตัวเลขหน้าหลัก */
+    '.hstats{display:flex;gap:calc(var(--p)*12);width:calc(var(--p)*1131);margin:0 auto calc(var(--p)*28)}' +
+    '.hstats[hidden]{display:none}' +
+    '.hstats .hs{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+    'gap:calc(var(--p)*2);padding:calc(var(--p)*16) calc(var(--p)*6);background:#2b2e3b;border:calc(var(--p)*4) solid #3b3f4d;' +
+    'border-radius:calc(var(--p)*18);font-family:"Minecraft","ThaiPixel","Prompt",sans-serif;text-shadow:0 calc(var(--p)*3) 0 #3b3f4d}' +
+    '.hstats .hs b{font-weight:400;font-size:calc(var(--p)*54);line-height:1.1;color:#eceef4;letter-spacing:calc(var(--p)*1.5)}' +
+    '.hstats .hs span{font-size:calc(var(--p)*26);color:#9aa0b8;text-shadow:none;white-space:nowrap}' +
+    '.hstats .dt{display:inline-block;width:calc(var(--p)*16);height:calc(var(--p)*16);border-radius:50%;background:#6bff8f;' +
+    'margin-right:calc(var(--p)*8);box-shadow:0 0 calc(var(--p)*12) #6bff8f;animation:blink 1.6s steps(1,end) infinite}' +
+    /* คอม/แท็บเล็ตจอกว้าง: หัวเว็บอยู่กลาง สินค้าเต็มจอและเพิ่มจำนวนต่อแถวตามความกว้าง */
+    '@media (min-width:760px){' +
+    ':root .app{width:100vw}' +
+    ':root .page{background:#0d0d0f}' +
+    ':root .page::before{content:"";position:absolute;left:50%;top:0;width:calc(var(--p)*1179);height:calc(var(--p)*1500);' +
+    'transform:translateX(-50%);background:url(/bg.png) center top/100% auto no-repeat;' +
+    '-webkit-mask-image:linear-gradient(180deg,#000 62%,transparent);mask-image:linear-gradient(180deg,#000 62%,transparent)}' +
+    ':root .page>.abs{margin-left:calc((100vw - var(--p)*1179)/2)}' +
+    ':root .panel{left:calc((100vw - var(--p)*1179)/2);right:calc((100vw - var(--p)*1179)/2);bottom:auto;height:calc(var(--p)*640);' +
+    '-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}' +
+    ':root .panel::after{display:none}' +
+    ':root .hstats{margin-top:calc(var(--p)*30)}' +
+    ':root #products{--p:calc(clamp(240px,100vw / 6.5,320px) / 561);width:100%;max-width:1800px;padding:0 24px;' +
+    'margin:24px auto 60px;grid-template-columns:repeat(auto-fill,calc(var(--p)*561));justify-content:center;gap:24px}' +
+    '}';
+  var st = document.createElement('style');
+  st.id = 'extra-css';
+  st.textContent = css;
+  (document.head || document.documentElement).appendChild(st);
+
+  /* ---------- 4) ตัวเลข 1k ---------- */
+  function K(n) {
+    n = +n || 0;
+    var a = Math.abs(n);
+    if (a < 1000) return String(Math.round(n));
+    var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
+    for (var i = 0; i < 3; i++) {
+      if (a >= u[i][0]) {
+        var v = Math.floor(a / u[i][0] * 10) / 10;
+        return (n < 0 ? '-' : '') + (v % 1 ? v.toFixed(1) : v.toFixed(0)) + u[i][1];
+      }
+    }
+  }
+  window.fmtK = K;
+
+  /* ---------- 5) แถบ ออนไลน์ / เข้าเว็บ / สินค้า (เปิด-ปิดที่หน้าแอดมิน) ---------- */
+  function init() {
+    if (typeof SB === 'undefined' || !SB.url) return;
+    var prod = document.getElementById('products');
+    if (!prod) return;
+    var base = SB.url.replace(/\/$/, '');
+    var bar = document.createElement('div');
+    bar.className = 'hstats';
+    bar.hidden = true;
+    prod.parentNode.insertBefore(bar, prod);
+    var defs = [['online', 'ออนไลน์'], ['visits', 'เข้าเว็บ'], ['products', 'สินค้า']];
+
+    function render(j) {
+      var h = '';
+      defs.forEach(function (d) {
+        if (j[d[0]] == null) return;
+        h += '<div class="hs"><b>' + K(j[d[0]]) + '</b><span>' + (d[0] === 'online' ? '<i class="dt"></i>' : '') + d[1] + '</span></div>';
+      });
+      bar.innerHTML = h;
+      bar.hidden = !h;
+    }
+    function load() {
+      if (document.hidden) return;
+      fetch(base + '/rest/v1/rpc/home_stats', {
+        method: 'POST',
+        headers: { apikey: SB.key, 'Content-Type': 'application/json' },
+        body: '{}'
+      }).then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(render).catch(function () {});
+    }
+    load();
+    setInterval(load, 20000);
+    document.addEventListener('visibilitychange', load);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
