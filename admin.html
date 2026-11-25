@@ -300,5 +300,129 @@ $("fpf").onchange=async()=>{const t=$("fpf").files[0];if($("fpf").value="",!t)re
 })();
 </script>
 
+<script>
+/* CreationLab admin patch: BUY/FREE + สั่งซื้อ/รับ ต่อสินค้า, กราฟสถิติ, ปุ่มรีเฟรชลอย */
+(function () {
+  var css = '.rf2{position:fixed;bottom:18px;right:max(14px,calc(50vw - 226px));z-index:30;width:54px;height:54px;padding:0;font-size:26px;border-radius:16px}' +
+    '.rf2.spin span{display:inline-block;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}' +
+    '#kCh svg{width:100%;height:auto;display:block}' +
+    '#kInfo{text-align:center;font-family:"Prompt",sans-serif;font-size:13px;color:#c9ccd8;min-height:20px;margin-bottom:6px}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  /* ---- เลือก BUY/FREE และ สั่งซื้อ/รับ ---- */
+  var mode = 'buy', btn = 'order';
+  var pn2 = document.createElement('div'); pn2.className = 'pn';
+  pn2.innerHTML = '<h3>หัวข้อหน้าสินค้า</h3><div class="seg" id="sMode"><button type="button" data-v="buy">BUY</button><button type="button" data-v="free">FREE</button></div>' +
+    '<h3 style="margin-top:14px">ปุ่มด้านล่าง</h3><div class="seg" id="sBtn"><button type="button" data-v="order">สั่งซื้อ</button><button type="button" data-v="get">รับ</button></div>';
+  var ip = $('ig').closest('.pn'); ip.parentNode.insertBefore(pn2, ip);
+
+  function paint() {
+    $('sMode').querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === mode); });
+    $('sBtn').querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === btn); });
+  }
+  $('sMode').onclick = function (e) { var b = e.target.closest('button'); if (b) { mode = b.dataset.v; paint(); } };
+  $('sBtn').onclick = function (e) { var b = e.target.closest('button'); if (b) { btn = b.dataset.v; paint(); } };
+
+  var _o = openEd;
+  openEd = function (t) { _o(t); mode = (t && t.mode) || 'buy'; btn = (t && t.btn) || 'order'; paint(); };
+
+  var _api = api;
+  api = function (t, e) {
+    e = e || {};
+    if (/^\/rest\/v1\/products/.test(t) && e.b && e.b.name !== undefined && (e.m === 'POST' || e.m === 'PATCH')) {
+      e.b.mode = mode; e.b.btn = btn;
+    }
+    return _api(t, e);
+  };
+  paint();
+
+  /* ---- กราฟแทนตารางประวัติ ---- */
+  $('kHist').closest('.pn').hidden = true;
+  $('rf').parentNode.hidden = true;
+  var pn = document.createElement('div'); pn.className = 'pn';
+  pn.innerHTML = '<div class="hh"><h3>กราฟสถิติ</h3><div class="seg" id="cg1"><button data-h="d" class="on">14 วัน</button><button data-h="m">12 เดือน</button></div></div>' +
+    '<div class="seg" id="cg2" style="margin-bottom:10px"><button data-m="visit" class="on">เข้าเว็บ</button><button data-m="view">ดูสินค้า</button><button data-m="buy">สั่งซื้อ</button></div>' +
+    '<div id="kInfo"></div><div id="kCh"></div>';
+  var host = $('kHist').closest('.pn'); host.parentNode.insertBefore(pn, host.nextSibling);
+
+  var D = null, per = 'd', met = 'visit', keys = [], vals = [];
+  function sh(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n); }
+  function lab(k) {
+    return per === 'd'
+      ? new Date(k + 'T00:00:00Z').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+      : new Date(k + '-01T00:00:00Z').toLocaleDateString('th-TH', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
+  function chart() {
+    var el = $('kCh');
+    if (!D) { el.innerHTML = '<p class="mut">ยังไม่มีสถิติ — รัน update.sql ก่อน</p>'; $('kInfo').textContent = ''; return; }
+    var today = D.today, m = {}, i;
+    D.daily.forEach(function (r) {
+      if (r.k !== met) return;
+      var k = per === 'd' ? r.d : r.d.slice(0, 7);
+      m[k] = (m[k] || 0) + (+r.n || 0);
+    });
+    keys = [];
+    if (per === 'd') {
+      for (i = 13; i >= 0; i--) {
+        var t = new Date(today + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() - i);
+        keys.push(t.toISOString().slice(0, 10));
+      }
+    } else {
+      var y = +today.slice(0, 4), mo = +today.slice(5, 7);
+      for (i = 0; i < 12; i++) {
+        keys.unshift(y + '-' + String(mo).padStart(2, '0'));
+        mo--; if (mo < 1) { mo = 12; y--; }
+      }
+    }
+    vals = keys.map(function (k) { return m[k] || 0; });
+    var mx = Math.max.apply(null, vals.concat([1])), W = 440, H = 190, top = 20, bot = 22, bw = W / keys.length, s = '', sum = 0;
+    vals.forEach(function (v, i) {
+      sum += v;
+      var h = Math.max(v ? 3 : 0, (H - top - bot) * v / mx), x = i * bw + bw * .15, w = bw * .7, y = H - bot - h, last = i === keys.length - 1;
+      s += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="3" fill="' + (last ? '#fff' : '#8d92a8') + '"/>';
+      if (v) s += '<text x="' + (x + w / 2) + '" y="' + (y - 4) + '" text-anchor="middle" font-size="10" fill="#c9ccd8">' + sh(v) + '</text>';
+      s += '<text x="' + (x + w / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10" fill="#8d92a8">' + (per === 'd' ? keys[i].slice(8) : keys[i].slice(5)) + '</text>';
+    });
+    keys.forEach(function (k, i) { s += '<rect data-i="' + i + '" x="' + (i * bw) + '" y="0" width="' + bw + '" height="' + H + '" fill="transparent"/>'; });
+    s += '<line x1="0" x2="' + W + '" y1="' + (H - bot) + '" y2="' + (H - bot) + '" stroke="#3b3f4d"/>';
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '">' + s + '</svg>';
+    $('kInfo').textContent = 'รวม ' + sum.toLocaleString('en-US') + ' · แตะแท่งเพื่อดูรายละเอียด';
+  }
+  $('kCh').onclick = function (e) {
+    var r = e.target.closest('rect[data-i]'); if (!r) return;
+    var i = +r.dataset.i;
+    $('kInfo').textContent = lab(keys[i]) + ' : ' + vals[i].toLocaleString('en-US');
+  };
+  $('cg1').onclick = function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    per = b.dataset.h;
+    $('cg1').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    chart();
+  };
+  $('cg2').onclick = function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    met = b.dataset.m;
+    $('cg2').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    chart();
+  };
+
+  var _ls = loadStats;
+  loadStats = async function () {
+    await _ls();
+    try { D = await api('/rest/v1/rpc/admin_stats', { m: 'POST', b: {} }); if (!D || !D.today) D = null; } catch (e) { D = null; }
+    chart();
+  };
+
+  /* ---- ปุ่มรีเฟรชลอยตลอดเวลา ทุกแท็บ ---- */
+  var rb = document.createElement('button'); rb.className = 'bt pri rf2'; rb.innerHTML = '<span>⟳</span>';
+  rb.onclick = async function () {
+    rb.classList.add('spin');
+    try { await loadProducts(); await loadStats(); } catch (e) {}
+    rb.classList.remove('spin');
+  };
+  $('main').appendChild(rb);
+})();
+
+</script>
 </body>
 </html>
