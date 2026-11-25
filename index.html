@@ -268,5 +268,46 @@ fetch(base+"/rest/v1/products?select=*&order=sort.asc,id.asc",{headers:hd}).then
 </script>
 <script>(()=>{const t=document.getElementById("spFx");if(!t)return;let n=7;const i=()=>(n=16807*n%2147483647)/2147483647,o=(a,b)=>a+i()*(b-a);let h="";[[-250,150,18,0,140,-100],[300,1100,22,-7,-150,110],[-280,2000,20,-4,150,-90]].forEach(([l,y,d,dl,gx,gy])=>{h+=`<i class="pg" style="left:calc(var(--p)*${l});top:calc(var(--p)*${y});--t:${d}s;--d:${dl}s;--gx:${gx};--gy:${gy}"></i>`});const c=["#fff","#d8d8d8","#a8a8a8","#ececec"],k=window.LITE?9:20;for(let a=0;a<k;a++){const d=o(9,16);h+=`<i class="pq" style="left:${o(1,97).toFixed(1)}%;top:calc(var(--p)*${Math.round(o(100,2500))});--s:${Math.round(o(7,18))};--t:${d.toFixed(1)}s;--d:${(-i()*d).toFixed(1)}s;--dx:${Math.round(o(-60,60))};--a:${o(.3,.7).toFixed(2)};--c:${c[a%4]}"></i>`}t.innerHTML=h})();
 </script>
+<script>
+/* CreationLab index patch: BUY/FREE title + สั่งซื้อ/รับ button (ไม่ต้องแก้โค้ดเดิม) */
+(function () {
+  if (typeof SB === 'undefined' || !SB.url) return;
+  var base = SB.url.replace(/\/$/, '');
+  var T = document.getElementById('pTitle');
+  var o = document.querySelector('a[href="#order"]');
+  if (!T || !o) return;
+  var ti = T.querySelector('img'), fx = T.querySelector('.tfx');
+  var M = {}, curId = null;
+
+  function set(p) {
+    var free = p && p.mode === 'free', get = p && p.btn === 'get';
+    var t = free ? '/product-title-free.png' : '/product-title.png';
+    ti.src = t; ti.alt = free ? 'FREE' : 'BUY';
+    if (fx) fx.style.webkitMaskImage = fx.style.maskImage = 'url(' + t + ')';
+    T.style.setProperty('--x', free ? 440 : 462);
+    T.style.setProperty('--w', free ? 300 : 265);
+    var b = get ? '/btn-get.png' : '/btn-order.png';
+    o.querySelectorAll('img').forEach(function (i) { i.src = b; });
+    o.style.setProperty('--img', 'url(' + b + ')');
+  }
+
+  function load(cb) {
+    fetch(base + '/rest/v1/products?select=id,mode,btn', { headers: { apikey: SB.key } })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (a) { a.forEach(function (x) { M[x.id] = x; }); cb && cb(); })
+      .catch(function () {});
+  }
+  load();
+
+  var ov = window.onView;
+  window.onView = function (id) {
+    curId = id;
+    set(M[id]);
+    load(function () { if (curId === id) set(M[id]); });
+    if (ov) ov(id);
+  };
+})();
+
+</script>
 </body>
 </html>
