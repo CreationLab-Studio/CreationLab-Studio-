@@ -417,5 +417,43 @@ $("fpf").onchange=async()=>{const t=$("fpf").files[0];if($("fpf").value="",!t)re
 })();
 
 </script>
+<script id="admin-pager">
+/* รายการสินค้าหลังบ้าน: หน้าละ 20 ชิ้น */
+(function () {
+  var PER_PAGE = 20, page = 0, count = 0;
+  var list = $('pl');
+  var nav = document.createElement('div');
+  nav.className = 'row';
+  nav.style.cssText = 'margin:14px 0 24px';
+  nav.hidden = true;
+  nav.innerHTML = '<button type="button" class="bt" data-d="-1">◀ ก่อนหน้า</button><span style="min-width:64px;text-align:center"></span><button type="button" class="bt" data-d="1">ถัดไป ▶</button>';
+  list.parentNode.insertBefore(nav, list.nextSibling);
+  var btns = nav.querySelectorAll('button'), label = nav.querySelector('span');
+  function show() {
+    var items = list.querySelectorAll('.pi'), total = Math.max(1, Math.ceil(items.length / PER_PAGE));
+    page = Math.max(0, Math.min(page, total - 1));
+    for (var i = 0; i < items.length; i++) items[i].hidden = Math.floor(i / PER_PAGE) !== page;
+    label.textContent = (page + 1) + ' / ' + total;
+    btns[0].disabled = page === 0;
+    btns[1].disabled = page === total - 1;
+    nav.hidden = total < 2;
+  }
+  nav.onclick = function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    page += +b.dataset.d;
+    show();
+    list.scrollIntoView({ behavior: 'smooth' });
+  };
+  var render = renderList;
+  renderList = function () {
+    render();
+    if (P.length > count) page = 0; /* เพิ่มสินค้าใหม่ ให้กลับไปหน้าแรก */
+    count = P.length;
+    show();
+  };
+  list.style.scrollMarginTop = '100px';
+})();
+</script>
 </body>
 </html>
