@@ -540,7 +540,7 @@ html.lite .sy.idle .kcur{animation:none}
     page = Math.max(0, Math.min(page, total - 1));
     for (var i = 0; i < cards.length; i++) cards[i].hidden = Math.floor(i / PER_PAGE) !== page;
     label.textContent = (page + 1) + ' / ' + total;
-    nav.hidden = total < 2;
+    nav.hidden = !cards.length; /* แสดงตลอดเมื่อมีสินค้า แม้มีหน้าเดียว */
     if (window.fitTitles) window.fitTitles(list);
   }
   /* รอรูปของหน้าใหม่ให้พร้อมก่อนเลื่อนเข้ามา (ไม่เกิน 500ms) */
@@ -607,5 +607,4 @@ html.lite .sy.idle .kcur{animation:none}
       var want = list.getBoundingClientRect().top + window.pageYOffset - (top ? top.offsetHeight : 0) - 8;
       await glide(Math.max(0, Math.min(want, max)), 480);
       list.style.minHeight = '';
-      /* 4) หน้าใหม่เลื่อนเข้ามาทีละใบ */
-      var inn 
+      /* 
