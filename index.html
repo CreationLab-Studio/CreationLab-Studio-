@@ -259,7 +259,7 @@ html.lite *{will-change:auto!important}
     <a class="abs btn" href="#search" style="--x:10;--y:calc(662 - var(--lift));--w:569;--h:221;--img:url('/btn-search.png')"><img src="/btn-search.png" alt="ค้นหาแอดออน"></a>
     <a class="abs btn" href="#how-to-use" style="--x:601;--y:calc(662 - var(--lift));--w:569;--h:221;--img:url('/btn-howto.png')"><img src="/btn-howto.png" alt="วิธีการสั่งซื้อ"></a>
     <section class="products" id="products"></section>
-    <nav class="pager" id="pager" aria-label="เปลี่ยนหน้าสินค้า" hidden><button type="button" data-d="-1" aria-label="หน้าก่อนหน้า"><img src="/back.png" alt=""></button><span></span><button type="button" data-d="1" aria-label="หน้าถัดไป"><img src="/back.png" alt=""></button></nav>
+    <nav class="pager" id="pager" aria-label="เปลี่ยนหน้าสินค้า" hidden><div class="pgb"><a class="btn" href="#pgprev" aria-label="หน้าก่อนหน้า" style="--img:url('/btn-page.png')"><img src="/btn-page.png" alt=""></a></div><div class="pgn"><span></span></div><div class="pgb next"><a class="btn" href="#pgnext" aria-label="หน้าถัดไป" style="--img:url('/btn-page.png')"><img src="/btn-page.png" alt=""></a></div></nav>
     <div class="footer"><img src="/card.png" alt=""></div>
   </main>
 </div>
@@ -296,7 +296,7 @@ html.lite *{will-change:auto!important}
     <div class="abs k" style="--x:8;--y:1352;--w:58;--h:91;z-index:200"><a class="btn sback" href="#pprev" style="display:block;width:100%;height:100%;--img:url('/back.png')"><img src="/back.png" alt="รูปก่อนหน้า"></a></div>
     <div class="abs k" style="--x:1113;--y:1352;--w:58;--h:91;z-index:200;transform:scaleX(-1)"><a class="btn sback" href="#pnext" style="display:block;width:100%;height:100%;--img:url('/back.png')"><img src="/back.png" alt="รูปถัดไป"></a></div>
     <div class="abs pthumbs" style="--x:0;--y:1270;--w:1179;--h:234"><div class="pttrack" id="pttrack"></div></div>
-    <div class="abs k pcount" id="pCount" style="--x:489;--y:1364;--w:200;--h:42;display:none"></div>
+    <div class="abs k pcount" id="pCount" style="--x:489;--y:1186;--w:200;--h:46;z-index:150"></div>
     <div class="abs k ptitle pname" id="pName" style="--x:229;--y:1548;--w:722;--h:84"><div class="tt"><span></span></div></div>
     <a class="abs k btn" href="#order" data-kind="buy" style="--x:36;--y:1696;--w:494;--h:142;--img:url('/btn-order.png')"><img src="/btn-order.png" alt="สั่งซื้อ"></a>
     <div class="abs k pplate" style="--x:38;--y:1852;--w:488;--h:129"></div>
@@ -510,44 +510,102 @@ window.addEventListener('load', function () {
 </script>
 <style id="pager-css">
 .pcard[hidden],.pager[hidden]{display:none}
-.pager{position:relative;z-index:20;display:flex;align-items:center;justify-content:center;gap:calc(var(--p)*60);margin:0 0 calc(var(--p)*50);font-family:"Minecraft",sans-serif;color:#eceef4;font-size:calc(var(--p)*52);text-shadow:0 calc(var(--p)*4) 0 #3b3f4d}
-.pager span{min-width:calc(var(--p)*220);text-align:center}
-.pager button{display:flex;align-items:center;justify-content:center;width:calc(var(--p)*150);height:calc(var(--p)*130);padding:0;cursor:pointer;background:#2e3342;border:calc(var(--p)*5) solid #8b8e9a;border-radius:calc(var(--p)*22)}
-.pager button img{height:55%;width:auto;pointer-events:none}
-.pager button[data-d="1"] img{transform:scaleX(-1)}
-.pager button:active{transform:scale(.94)}
-.pager button:disabled{opacity:.35;cursor:default}
+.pager{position:relative;z-index:20;display:flex;align-items:center;justify-content:center;gap:calc(var(--p)*42);margin:calc(var(--p)*12) 0 calc(var(--p)*60)}
+.pgb{width:calc(var(--p)*118);height:calc(var(--p)*112)}
+.pgb.next{transform:scaleX(-1)}
+.pgb .btn{display:block;position:relative;width:100%;height:100%}
+.pgb .btn img{display:block;width:100%;height:100%}
+.pgn{display:flex;align-items:center;justify-content:center;overflow:hidden;width:calc(var(--p)*260);height:calc(var(--p)*102);background:rgba(19,20,26,.6);border:calc(var(--p)*5) solid #30323b;border-radius:calc(var(--p)*20);font-family:"Minecraft",sans-serif;font-size:calc(var(--p)*56);letter-spacing:calc(var(--p)*2);color:#d5d8e2;text-shadow:0 calc(var(--p)*4) 0 #3b3f4d;white-space:nowrap}
+.pgn span{display:block;line-height:1}
+.products.paging{pointer-events:none;align-content:start}
 </style>
 <script id="pager-js">
 /* หน้าหลัก: แสดงสินค้าหน้าละ PER_PAGE ชิ้น (ช่องค้นหายังค้นได้ทุกชิ้น) */
 (function () {
-  var PER_PAGE = 20, page = 0;
+  var PER_PAGE = 20, page = 0, busy = false;
   var list = document.getElementById('products'), nav = document.getElementById('pager');
   if (!list || !nav) return;
-  var label = nav.querySelector('span'), btns = nav.querySelectorAll('button');
+  var label = nav.querySelector('.pgn span');
+  var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  function pages() { return Math.max(1, Math.ceil(list.querySelectorAll('.pcard').length / PER_PAGE)); }
+  function visible() { return Array.prototype.filter.call(list.querySelectorAll('.pcard'), function (c) { return !c.hidden; }); }
   function show() {
-    var cards = list.querySelectorAll('.pcard');
-    var total = Math.max(1, Math.ceil(cards.length / PER_PAGE));
+    var cards = list.querySelectorAll('.pcard'), total = pages();
     page = Math.max(0, Math.min(page, total - 1));
     for (var i = 0; i < cards.length; i++) cards[i].hidden = Math.floor(i / PER_PAGE) !== page;
     label.textContent = (page + 1) + ' / ' + total;
-    btns[0].disabled = page === 0;
-    btns[1].disabled = page === total - 1;
     nav.hidden = total < 2;
     if (window.fitTitles) window.fitTitles(list);
   }
-  nav.addEventListener('click', function (e) {
-    var b = e.target.closest('button');
-    if (!b || b.disabled) return;
-    page += Number(b.getAttribute('data-d'));
-    show();
-    var y = list.getBoundingClientRect().top + window.pageYOffset;
-    var top = document.querySelector('.topbar');
-    window.scrollTo(0, Math.max(0, y - (top ? top.offsetHeight : 0) - 8));
-  });
-  (window.onProd = window.onProd || []).push(show); /* ทำงานหลังรายการสินค้าถูกวาดใหม่ */
-  show();
-})();
-</script>
-</body>
-</html>
+  /* รอรูปของหน้าใหม่ให้พร้อมก่อนเลื่อนเข้ามา (ไม่เกิน 500ms) */
+  function ready(cards) {
+    var jobs = cards.slice(0, 6).map(function (c) {
+      var img = c.querySelector('.pimg img');
+      if (!img || !img.decode) return null;
+      img.loading = 'eager';
+      return img.decode().catch(function () {});
+    });
+    return Promise.race([Promise.all(jobs), wait(500)]);
+  }
+  function anim(el, frames, opt) {
+    return el.animate ? el.animate(frames, opt) : null;
+  }
+  function done(list_) {
+    return Promise.all(list_.map(function (a) {
+      return a ? new Promise(function (r) { a.onfinish = a.oncancel = r; setTimeout(r, 1200); }) : null;
+    }));
+  }
+  /* เลื่อนจอแบบนุ่มนวล */
+  function glide(to, ms) {
+    var from = window.pageYOffset, t0 = performance.now();
+    if (Math.abs(to - from) < 2) return Promise.resolve();
+    return new Promise(function (res) {
+      (function step(now) {
+        var k = Math.min(1, Math.max(0, (now - t0) / ms));
+        var e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+        window.scrollTo(0, from + (to - from) * e);
+        if (k < 1) requestAnimationFrame(step); else res();
+      })(t0);
+    });
+  }
+  async function go(dir) {
+    if (busy || pages() < 2) return;
+    busy = true;
+    var dx = Math.round(list.offsetWidth * .22);
+    list.classList.add('paging');
+    try {
+      /* 1) หน้าเดิมเลื่อนออก */
+      var out = visible().map(function (c, i) {
+        return anim(c, [{ transform: 'translate3d(0,0,0) scale(1)', opacity: 1 }, { transform: 'translate3d(' + (-dir * dx) + 'px,0,0) scale(.94)', opacity: 0 }],
+          { duration: 220, delay: Math.min(i, 5) * 25, easing: 'cubic-bezier(.4,0,.8,.4)', fill: 'forwards' });
+      });
+      anim(label, [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(' + (-dir * 100) + '%)', opacity: 0 }], { duration: 180, easing: 'ease-in', fill: 'forwards' });
+      await done(out);
+      /* 2) สลับสินค้า โดยล็อกความสูงไว้ไม่ให้จอกระตุก */
+      var oldH = list.offsetHeight, fullH = document.documentElement.scrollHeight;
+      list.style.minHeight = oldH + 'px';
+      page = (page + dir + pages()) % pages();
+      show();
+      out.forEach(function (a) { if (a) a.cancel(); });
+      var next = visible();
+      next.forEach(function (c) { c.style.opacity = '0'; });
+      label.getAnimations && label.getAnimations().forEach(function (a) { a.cancel(); });
+      anim(label, [{ transform: 'translateY(' + (dir * 100) + '%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.9,.25,1)' });
+      await ready(next);
+      /* 3) เลื่อนจอไปต้นรายการ */
+      var rows = Math.ceil(next.length / 2), gap = parseFloat(getComputedStyle(list).rowGap) || 0;
+      var newH = rows * (next[0] ? next[0].offsetHeight : 0) + Math.max(0, rows - 1) * gap;
+      var pageMin = parseFloat(getComputedStyle(document.getElementById('page')).minHeight) || 0;
+      var max = Math.max(0, Math.max(pageMin, fullH - oldH + newH) - window.innerHeight);
+      var top = document.querySelector('.topbar');
+      var want = list.getBoundingClientRect().top + window.pageYOffset - (top ? top.offsetHeight : 0) - 8;
+      await glide(Math.max(0, Math.min(want, max)), 480);
+      list.style.minHeight = '';
+      /* 4) หน้าใหม่เลื่อนเข้ามาทีละใบ */
+      var inn = next.map(function (c, i) {
+        c.style.opacity = '';
+        return anim(c, [{ transform: 'translate3d(' + (dir * dx) + 'px,' + Math.round(dx * .12) + 'px,0) scale(.94)', opacity: 0 }, { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 }],
+          { duration: 460, delay: Math.min(i, 7) * 55, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' });
+      });
+      await done(inn);
+    } fin
