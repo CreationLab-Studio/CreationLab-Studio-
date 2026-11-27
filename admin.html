@@ -455,5 +455,58 @@ $("fpf").onchange=async()=>{const t=$("fpf").files[0];if($("fpf").value="",!t)re
   list.style.scrollMarginTop = '100px';
 })();
 </script>
+<script id="admin-social">
+/* ตั้งค่า > ลิงก์ปุ่มโซเชียลด้านล่างหน้าหลัก (เก็บที่ตาราง settings, key = social) */
+(function () {
+  var LIST = [['facebook', 'Facebook'], ['youtube', 'YouTube'], ['tiktok', 'TikTok'], ['discord', 'Discord']];
+  var pn = document.createElement('div');
+  pn.className = 'pn';
+  pn.innerHTML = '<h3>ลิงก์ปุ่มด้านล่าง</h3><p class="mut">วางลิงก์แล้วกดบันทึก ช่องที่เว้นว่างจะยังกดไปไหนไม่ได้</p>' +
+    LIST.map(function (x) {
+      return '<label for="so_' + x[0] + '">' + x[1] + '</label><input class="in" id="so_' + x[0] + '" inputmode="url" placeholder="https://..." autocapitalize="off" autocomplete="off" spellcheck="false">';
+    }).join('') +
+    '<p class="err" id="soErr"></p><button type="button" class="bt pri" id="soSave" style="width:100%" disabled>บันทึกลิงก์</button>';
+  $('vg').appendChild(pn);
+
+  var save = $('soSave'), err = $('soErr'), dirty = false, seq = 0;
+  pn.addEventListener('input', function () { dirty = true; });
+
+  async function load() {
+    if (dirty) return; /* ไม่ทับสิ่งที่กำลังพิมพ์ค้างไว้ */
+    var id = ++seq;
+    save.disabled = true; err.textContent = '';
+    try {
+      var r = await api('/rest/v1/settings?key=eq.social&select=value');
+      if (id !== seq) return;
+      var v = (r && r[0] && r[0].value) || {};
+      if (!dirty) LIST.forEach(function (x) { $('so_' + x[0]).value = v[x[0]] || ''; });
+      save.disabled = false;
+    } catch (e) {
+      err.textContent = 'โหลดลิงก์ไม่สำเร็จ ลองกดรีเฟรชหน้าแล้วเข้าใหม่';
+      return;
+    }
+    /* เช็คว่าหน้าหลักอ่านลิงก์ได้แล้วหรือยัง */
+    try { await api('/rest/v1/rpc/social_links', { m: 'POST', b: {} }); }
+    catch (e) { if (/PGRST202|42883|social_links/i.test(String(e && e.message))) err.textContent = 'ยังไม่ได้รันไฟล์ links.sql ใน Supabase หน้าหลักจะยังไม่เห็นลิงก์'; }
+  }
+
+  save.onclick = async function () {
+    var v = {};
+    LIST.forEach(function (x) { var i = $('so_' + x[0]); i.value = v[x[0]] = linkOf(i.value); });
+    save.disabled = true;
+    try {
+      await api('/rest/v1/settings?on_conflict=key', { m: 'POST', b: { key: 'social', value: v }, h: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
+      dirty = false;
+      toast('บันทึกลิงก์แล้ว');
+    } catch (e) { toast('บันทึกลิงก์ไม่สำเร็จ'); }
+    save.disabled = false;
+  };
+
+  var _show = show;
+  show = function (t) { _show(t); if (t === 'g') load(); };
+  /* ออกจากระบบ = ทิ้งค่าที่พิมพ์ค้าง */
+  $('out').addEventListener('click', function () { dirty = false; });
+})();
+</script>
 </body>
 </html>
