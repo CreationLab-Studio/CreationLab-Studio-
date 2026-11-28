@@ -314,7 +314,6 @@ html.lite .home-fx .pg,html.lite .home-fx .pq:nth-child(n+10){display:none}
     <a class="abs btn" href="#how-to-use" style="--x:601;--y:calc(662 - var(--lift));--w:569;--h:221;--img:url('/btn-howto.png')"><img src="/btn-howto.png" alt="วิธีการสั่งซื้อ"></a>
     <section class="products" id="products"></section>
     <nav class="pager" id="pager" aria-label="เปลี่ยนหน้าสินค้า"><div class="pgb"><a class="btn" href="#pgprev" aria-label="หน้าก่อนหน้า"><img alt=""></a></div><div class="pgn"><span>1 / 1</span></div><div class="pgb next"><a class="btn" href="#pgnext" aria-label="หน้าถัดไป"><img alt=""></a></div></nav>
-    <div class="footer"><img src="/card.png" alt=""></div>
   </main>
 </div>
 <nav class="social" id="social" aria-label="ช่องทางติดตาม">
@@ -393,7 +392,7 @@ if (SB.url) { PRODUCTS.length = 0; try { PRODUCTS.push(...JSON.parse(localStorag
 <script>(()=>{const t=t=>String(t).replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[t])),e=document.getElementById("products"),n=()=>{e.innerHTML=PRODUCTS.map((e,n)=>{const i=fmtPrice(e.price),s=i.length,pw=Math.min(200,Math.max(164,40+31*s)),l=Math.max(12,Math.min(38,Math.floor((pw-24)/(.78*Math.max(s,1)))));return`\n    <article class="pcard"${n>=20?" hidden":""}>\n      <div class="abs pimg" style="--x:6;--y:6;--w:549;--h:549">\n        <img src="${t(e.image||function(t){const e=(67*t+200)%360;return"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 544 544"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${e},55%,42%)"/><stop offset="1" stop-color="hsl(${(e+50)%360},60%,16%)"/></linearGradient><pattern id="p" width="34" height="34" patternUnits="userSpaceOnUse"><rect width="17" height="17" fill="#fff" opacity=".05"/><rect x="17" y="17" width="17" height="17" fill="#fff" opacity=".05"/></pattern></defs><rect width="544" height="544" fill="url(#g)"/><rect width="544" height="544" fill="url(#p)"/><text x="272" y="300" text-anchor="middle" font-family="monospace" font-weight="700" font-size="64" fill="#fff" opacity=".85">PRODUCT ${t+1}</text></svg>`)}(n))}" alt="${t(e.name)}" loading="lazy" decoding="async">\n      </div>\n      <div class="abs ptitle" style="--x:22;--y:561;--w:${549-pw-32};--h:76"><div class="tt"><span>${t(e.name)}</span></div></div>\n      <div class="abs ptag" style="--x:${549-pw};--y:566;--w:${pw};--h:66">\n        <b style="font-size:calc(var(--p)*${l})">${t(i)}</b>\n      </div>\n      <a class="abs btn" data-kind="buy" href="#buy-${n+1}" style="--x:21;--y:641;--w:519;--h:136;--img:url('${e.btn==="get"?"/btn-get-card.png":"/btn-buy.png"}')">\n        <img src="${e.btn==="get"?"/btn-get-card.png":"/btn-buy.png"}" alt="${e.btn==="get"?"GET":"BUY"}">\n      </a>\n    </article>`}).join(""),window.bindBtn&&e.querySelectorAll(".btn").forEach(window.bindBtn),window.fitTitles&&window.fitTitles()};function i(t){const F=document.fonts?""+document.fonts.check("30px Minecraft","Aa0")+document.fonts.check("30px ThaiPixel","ก"):"";(t&&t.querySelectorAll?t:document).querySelectorAll(".ptitle").forEach(t=>{const W=t.clientWidth;if(!W)return;const K=[t.textContent,W,t.clientHeight,F].join("|");if(t.dataset.fit===K)return;t.dataset.fit=K;const e=t.firstElementChild,n=t=>{e.style.fontSize=`calc(var(--p)*${t})`,e.style.letterSpacing=`calc(var(--p)*${(.04*t).toFixed(2)})`},i=()=>e.offsetHeight<=t.clientHeight+.5&&e.scrollWidth<=e.clientWidth+.5;let s=12,l=t.classList.contains("pname")?66:46,o=12;for(;s<=l;){const t=s+l>>1;n(t),i()?(o=t,s=t+1):l=t-1}n(o)})}n(),(window.onProd=window.onProd||[]).push(n),window.fitTitles=i;const s=()=>i();document.fonts&&document.fonts.load?(document.fonts.load("30px Minecraft","Aa0฿").then(s,s),document.fonts.ready.then(s)):s(),window.addEventListener("load",s),window.addEventListener("resize",(()=>{let q=0;return()=>{q||(q=requestAnimationFrame(()=>{q=0,s()}))}})())})();
 </script>
 <script id="pager-js">
-/* หน้าหลัก: หน้าละ PER_PAGE ชิ้น กดถัดไปจะเลื่อนขึ้นไปแถวบนสุด แล้วปัดเปลี่ยนสินค้าแบบสปริง */
+/* หน้าหลัก: หน้าละ PER_PAGE ชิ้น กดถัดไปจะไปโผล่แถวบนสุดทันที แล้วปัดเปลี่ยนสินค้าแบบสปริง */
 (function () {
   var PER_PAGE = 20, page = 0, run = null;
   var list = document.getElementById('products'), nav = document.getElementById('pager');
@@ -462,54 +461,29 @@ if (SB.url) { PRODUCTS.length = 0; try { PRODUCTS.push(...JSON.parse(localStorag
     r.anims.forEach(function (a) { a.cancel(); });
     if (r.ghost) r.ghost.remove();
   }
-  /* เลื่อนขึ้นไปให้แถวแรกอยู่ใต้แถบด้านบนอย่างลื่นไหล แล้วค่อยเรียก done */
-  var scrolling = null;
-  function topY() {
+  /* กระโดดไปแถวแรกใต้แถบด้านบนทันที (ไม่มีการเลื่อนให้เห็น) */
+  function jumpTop() {
     var bar = document.querySelector('.topbar'), first = document.querySelector('.hstats:not([hidden])') || list;
-    return Math.max(0, first.getBoundingClientRect().top + window.pageYOffset - (bar ? bar.offsetHeight : 0) - 4);
-  }
-  function toTop(done) {
-    var from = window.pageYOffset, to = topY(), d = from - to;
-    if (d < 2) return done();
-    var ms = Math.min(460, 220 + d * .06), t0 = 0, raf = 0;
-    function end() {
-      cancelAnimationFrame(raf);
-      removeEventListener('touchstart', stop); removeEventListener('wheel', stop);
-      scrolling = null;
-      done();
-    }
-    /* ผู้ใช้แตะหรือหมุนล้อระหว่างเลื่อน: หยุดเลื่อนเอง แล้วเปลี่ยนสินค้าเลย */
-    function stop() { end(); }
-    addEventListener('touchstart', stop, { passive: true }); addEventListener('wheel', stop, { passive: true });
-    raf = requestAnimationFrame(function step(now) {
-      if (!t0) t0 = now;
-      var k = Math.min(1, (now - t0) / ms);
-      var e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-      window.scrollTo({ top: from - d * e, behavior: 'instant' });
-      if (k < 1) raf = requestAnimationFrame(step); else end();
-    });
+    var y = first.getBoundingClientRect().top + window.pageYOffset - (bar ? bar.offsetHeight : 0) - 4;
+    y = Math.max(0, y);
+    /* หน้าที่มีสินค้าน้อย: ยืดหน้าให้พอเลื่อนมาถึงตำแหน่งเดียวกันได้ */
+    host.style.minHeight = '';
+    if (host.offsetHeight < y + window.innerHeight) host.style.minHeight = Math.ceil(y + window.innerHeight) + 'px';
+    window.scrollTo({ top: y, behavior: 'instant' });
   }
   function go(dir) {
-    if (total() < 2) return;
-    if (scrolling) { scrolling.dir += dir; return; }   /* กดซ้ำระหว่างเลื่อน: นับรวมไว้ */
-    finish();
-    var job = scrolling = { dir: dir };
-    toTop(function () {
-      scrolling = null;
-      if (job.dir) swap(job.dir);
-    });
-  }
-  function swap(dir) {
     var t = total();
     if (t < 2) return;
     finish();   /* กดรัวได้: จบรอบเก่าทันทีแล้วเริ่มรอบใหม่ */
+    jumpTop();
     var canAnim = !!list.animate, old = canAnim ? onScreen() : [];
-    page = ((page + dir) % t + t) % t;
-    dir = dir > 0 ? 1 : -1;
+    var base = host.getBoundingClientRect();   /* วัดพร้อมกับการ์ดชุดเก่า */
+    page = (page + dir + t) % t;
     show();
+    jumpTop();  /* หน้าเดิมสั้นกว่า: หลังเปลี่ยนแล้วค่อยขึ้นได้สุด */
     if (!canAnim) return;
     var dist = window.CAPW ? window.CAPW() : list.offsetWidth;
-    var base = host.getBoundingClientRect(), ghost = document.createElement('div');
+    var ghost = document.createElement('div');
     ghost.className = 'pg-ghost';
     ghost.setAttribute('aria-hidden', 'true');
     var anims = [], wait = 0;
@@ -555,7 +529,7 @@ if (SB.url) { PRODUCTS.length = 0; try { PRODUCTS.push(...JSON.parse(localStorag
   }, { rootMargin: '300px' }).observe(nav);
   /* ทำงานทุกครั้งที่รายการสินค้าถูกวาดใหม่ */
   new MutationObserver(function () { finish(); show(); }).observe(list, { childList: true });
-  window.addEventListener('resize', finish);
+  window.addEventListener('resize', function () { finish(); host.style.minHeight = ''; });
   window.addEventListener('pageshow', show);
   show();
 })();
